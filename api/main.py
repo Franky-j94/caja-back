@@ -358,14 +358,12 @@ def eliminar_tienda(id):
     finally:
         conn.close()
 
-@app.route('/productos', methods=['GET'])
+@app.route('/productos/consulta', methods=['POST'])
 def get_producto():
     data = request.get_json()
     id_tienda = data.get('id_tienda')
     clave = data.get('clave')
-    if not id_tienda:
-        log.warning("Faltan datos requeridos")
-        return jsonify({'error': 'Faltan datos requeridos'}), 400
+
     try:
         p = Productos()
         productos = p.get_productos(id_tienda= id_tienda, clave=clave)
@@ -558,49 +556,41 @@ def subir_archivo(method):
         return jsonify({'error': ''}), 400
     return jsonify(mensaje=f"Archivo recibido: "), 200
 
-@app.route('/inventarios/movimiento/<int:t>', methods=['POST'])
-def movimiento_inventario(t):
-
+@app.route('/inventarios/movimiento', methods=['POST'])
+def movimiento_inventario():
     data = request.get_json()
+    id_tipo_movimiento = data.get("id_tipo_movimiento")
     referencia = data.get("referencia")
     id_tienda = data.get("id_tienda")
-    entradas = [1, 2, 5, 10]
-    salidas = [6, 8]
+    id_tienda_origen = data.get("id_tienda_origen")
+    log.info(f"id_tienda: {id_tienda}")
 
-    mov = Inventarios()
-    p = Productos()
+    if not id_tienda or not referencia or not id_tipo_movimiento:
+        log.warning("Faltan datos requeridos")
+        return jsonify({'error': 'Faltan datos requeridos'}), 400
 
     try:
-        n = 0
-        for d in data.get("lista"):
+        mov = Inventarios()
 
-            n = n + 1
+        ret = mov.movimiento_inventario(referencia=referencia, id_tipo_movimiento=id_tipo_movimiento,
+                                        id_tienda=id_tienda, id_tienda_origen=id_tienda_origen, lista=data.get("lista"))
 
-            cantidad = d.get("cantidad")
-            id_producto = d.get("id_producto")
-            costo_unidad = d.get("costo_unidad")
-            costo_total = d.get("costo_total")
-
-            ret = mov.movimiento_inventario(referencia=referencia, id_tipo_movimiento=t, numero=n,
-                                            cantidad=cantidad, id_producto=id_producto, costo_unidad=costo_unidad,
-                                            costo_total=costo_total, id_tienda=id_tienda)
-            if ret == 0:
-                log.warning("Movimiento al inventario no registrado")
-
-            else:
-                log.info(f"Movimiento al inventario registrado correctamente")
-
-                if t in salidas:
-                    cantidad = -cantidad
-                    print(f"->> cantidad {cantidad}")
-                inv = p.alta_inventario(id_tienda, id_producto, cantidad)
-                if inv == 0:
-                    log.info(f"Hubo un error al calcular el stock")
-                else:
-                    log.info(f"Stock actializado correctamente")
+        log.info(f"ret: {ret}")
         return jsonify({'mensaje': 'Movimiento registrado correctamente'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/movimientos', methods=['POST'])
+def get_movimientos():
+    data = request.get_json()
+    referencia = data.get("referencia")
+
+    try:
+        m = Inventarios()
+        movimientos = m.get_movimientos(referencia)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    return jsonify(movimientos)
 
 @app.route('/politicas', methods=['GET'])
 def get_politicas():
@@ -723,23 +713,21 @@ def update_politica(id_politica):
 
 @app.route('/departamentos', methods=['GET'])
 def get_departamentos():
-        data = request.get_json()
-        clave = data.get('clave')
 
-        try:
-            d = Departamentos()
-            dptos = d.get_departamentos(clave)
+    try:
+        d = Departamentos()
+        dptos = d.get_departamentos()
 
-        except Exception as e:
-            return jsonify({'error': str(e)}), 500
-        return jsonify(dptos)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    return jsonify(dptos)
 
 @app.route('/departamentos', methods=['POST'])
 def create_departamento():
 
     data = request.get_json()
     clave = data.get('clave')
-    descripcion = data.get("descripcion")
+    descripcion = data.get("descripcion_departamento")
 
     log.info(f"Request politicas: {data}")
 
@@ -759,10 +747,10 @@ def create_departamento():
 
 @app.route('/departamentos/<int:id>', methods=['PUT'])
 def update_departamento(id):
-    print("actualizando departamento...")
+    print("--------->>>>>>>>>>> actualizando departamento...")
     data = request.get_json()
     clave = data.get('clave')
-    descripcion = data.get('descripcion')
+    descripcion = data.get('descripcion_departamento')
 
     try:
         conn = get_connection()
@@ -797,13 +785,13 @@ def delete_departamento(id):
     finally:
         conn.close()
 
-@app.route('/lineas/<int:id>', methods=['DELETE'])
-def delete_linea(id):
+@app.route('/lineas/<int:id_linea>', methods=['DELETE'])
+def delete_linea(id_linea):
     try:
         conn = get_connection()
         with conn.cursor() as cursor:
             sql = "DELETE FROM lineas WHERE id_linea = %s"
-            cursor.execute(sql, (id,))
+            cursor.execute(sql, (id_linea,))
             conn.commit()
             if cursor.rowcount == 0:
                 return jsonify({'Linea': 'Linea no encontrada'}), 404
@@ -817,9 +805,10 @@ def delete_linea(id):
 def create_lineas():
 
     data = request.get_json()
+    print(f"->>>> create_lineas: {data}")
     clave = data.get('clave')
     id_departamento = data.get('id_departamento')
-    descripcion = data.get("descripcion")
+    descripcion = data.get("descripcion_linea")
 
 
     if not id_departamento or not clave or not descripcion:
@@ -838,28 +827,27 @@ def create_lineas():
 
 @app.route('/lineas', methods=['GET'])
 def get_lineas():
-        data = request.get_json()
-        clave = data.get('clave')
+    try:
+        l = Lineas()
+        lineas = l.get_lineas()
 
-        try:
-            l = Lineas()
-            lineas = l.get_lineas(clave)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    return jsonify(lineas)
 
-        except Exception as e:
-            return jsonify({'error': str(e)}), 500
-        return jsonify(lineas)
 
-@app.route('/lineas/<int:id>', methods=['PUT'])
-def update_lineas(id):
+
+@app.route('/lineas/<int:id_linea>', methods=['PUT'])
+def update_lineas(id_linea):
     print("Actualizando linea...")
     data = request.get_json()
     clave = data.get('clave')
     id_departamento = data.get('id_departamento')
-    descripcion = data.get('descripcion')
+    descripcion = data.get('descripcion_linea')
 
     try:
         l = Lineas()
-        ret = l.update_linea(id_departamento, clave, descripcion, id)
+        ret = l.update_linea(id_departamento, clave, descripcion, id_linea)
         if ret == 0:
             log.info(f"Ningun cambio para la linea {clave}")
             return jsonify({'mensaje': 'Ninguna modificacin para la linea'}), 201
