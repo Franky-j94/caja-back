@@ -5,8 +5,8 @@ def get_connection():
         conn = pymysql.connect(
             host='localhost',
             user='root',
-            password='',
-            database='caja',
+            password='Elias_lima86',
+            database='caja3',
             cursorclass=pymysql.cursors.DictCursor
         )
         print("Conectando...")

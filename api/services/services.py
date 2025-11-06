@@ -44,63 +44,66 @@ class Usuarios:
         return user
 class Productos:
 
-    def get_productos(self, id_tienda:int = None, clave:str = None):
+    def get_productos(self, id_tienda: int = None, clave: str = None):
         print(f"Tienda: {id_tienda}")
         print(f"clave: {clave}")
-        params =[]
+        params = []
         try:
             sql = f"""
-select p.id_producto, p.clave clave_producto, p.descripcion, p.clave_alterna, l.clave as clave_linea, l.descripcion_linea,
-i.stock existencias,
-pr_1.precio precio_publico,
-pr_2.precio precio_2,
-pr_3.precio precio_3,
-pr_4.precio precio_4,
-pr_5.precio precio_5,
-pr_6.precio precio_6,
-pr_7.precio precio_7,
-pr_8.precio precio_8,
-pr_9.precio precio_9,
-pr_10.precio precio_minimo,
-pr_11.precio costo_promedio,
-pr_12.precio ultimo_costo
-from productos p 
-                    left join inventarios i
-                    on i.id_producto = p.id_producto
-                    left join tiendas t 
-                    on t.id_tienda = i.id_tienda 
-                    left join lineas l on l.id_linea = p.id_linea 
-                    and i.id_tienda = %s
-                    left join precios pr_1 on pr_1.id_producto = p.id_producto 
-                    and pr_1.id_precio = 1
-                    left join precios pr_2 on pr_2.id_producto = p.id_producto 
-                    and pr_2.id_precio = 2
-                    left join precios pr_3 on pr_3.id_producto = p.id_producto 
-                    and pr_3.id_precio = 3
-                    left join precios pr_4 on pr_4.id_producto = p.id_producto 
-                    and pr_4.id_precio = 4
-                    left join precios pr_5 on pr_5.id_producto = p.id_producto 
-                    and pr_5.id_precio = 5
-                    left join precios pr_6 on pr_6.id_producto = p.id_producto 
-                    and pr_6.id_precio = 6
-                    left join precios pr_7 on pr_7.id_producto = p.id_producto 
-                    and pr_7.id_precio = 7
-                    left join precios pr_8 on pr_8.id_producto = p.id_producto 
-                    and pr_8.id_precio = 8
-                    left join precios pr_9 on pr_9.id_producto = p.id_producto 
-                    and pr_9.id_precio = 9
-                    left join precios pr_10 on pr_10.id_producto = p.id_producto 
-                    and pr_10.id_precio = 10
-                    left join precios pr_11 on pr_11.id_producto = p.id_producto 
-                    and pr_11.id_precio = 11
-                    left join precios pr_12 on pr_12.id_producto = p.id_producto 
-                    and pr_12.id_precio = 12
-                        """
-            params.append(id_tienda)
-            if clave:
+    select p.id_producto, p.clave clave, p.descripcion, p.clave_alterna, l.clave as clave_linea, l.descripcion_linea,
+    i.stock existencias,
+    pr_1.precio precio_publico,
+    pr_2.precio precio_2,
+    pr_3.precio precio_3,
+    pr_4.precio precio_4,
+    pr_5.precio precio_5,
+    pr_6.precio precio_6,
+    pr_7.precio precio_7,
+    pr_8.precio precio_8,
+    pr_9.precio precio_9,
+    pr_10.precio precio_minimo,
+    pr_11.precio costo_promedio,
+    pr_12.precio ultimo_costo
+    from productos p 
+                        left join inventarios i
+                        on i.id_producto = p.id_producto
+                        left join lineas l on l.id_linea = p.id_linea                   
+                        left join precios pr_1 on pr_1.id_producto = p.id_producto 
+                        and pr_1.id_precio = 1
+                        left join precios pr_2 on pr_2.id_producto = p.id_producto 
+                        and pr_2.id_precio = 2
+                        left join precios pr_3 on pr_3.id_producto = p.id_producto 
+                        and pr_3.id_precio = 3
+                        left join precios pr_4 on pr_4.id_producto = p.id_producto 
+                        and pr_4.id_precio = 4
+                        left join precios pr_5 on pr_5.id_producto = p.id_producto 
+                        and pr_5.id_precio = 5
+                        left join precios pr_6 on pr_6.id_producto = p.id_producto 
+                        and pr_6.id_precio = 6
+                        left join precios pr_7 on pr_7.id_producto = p.id_producto 
+                        and pr_7.id_precio = 7
+                        left join precios pr_8 on pr_8.id_producto = p.id_producto 
+                        and pr_8.id_precio = 8
+                        left join precios pr_9 on pr_9.id_producto = p.id_producto 
+                        and pr_9.id_precio = 9
+                        left join precios pr_10 on pr_10.id_producto = p.id_producto 
+                        and pr_10.id_precio = 10
+                        left join precios pr_11 on pr_11.id_producto = p.id_producto 
+                        and pr_11.id_precio = 11
+                        left join precios pr_12 on pr_12.id_producto = p.id_producto 
+                        and pr_12.id_precio = 12           
+                            """
+            if id_tienda and id_tienda is not None:
+                sql += f"""inner join tiendas t 
+                        on t.id_tienda = i.id_tienda """
+                sql += f""" and i.id_tienda = %s"""
+                params.append(id_tienda)
+
+            if clave and clave is not None:
                 sql += f""" where p.clave like %s"""
                 params.append("%" + clave + "%")
 
+            print(f"--SQL: {sql}")
             conn = get_connection()
             cursor = conn.cursor()
             cursor.execute(sql, params)
@@ -196,23 +199,91 @@ from productos p
 
 class Inventarios:
 
-    def movimiento_inventario(self, referencia:str, id_tipo_movimiento:int, numero:int,
-                                    cantidad:float, id_producto:int, costo_unidad:float, costo_total:float,
-                                    id_tienda:int):
+    def movimiento_inventario(self, referencia:str, id_tipo_movimiento:int,
+                                    id_tienda:int, id_tienda_origen:int, lista=list):
+        salidas = [6, 8]
+
         try:
             conn = get_connection()
             with conn.cursor() as cursor:
-                sql = "insert into movimientos_inventario values(%s, %s, %s, %s, %s, %s, %s, %s, now(), %s)"
-                cursor.execute(sql, (None, referencia, id_tipo_movimiento, numero,
-                                     cantidad, id_producto, costo_unidad, costo_total,
-                                     id_tienda))
+                sql1 = "insert into movimientos_inventario values(null, %s, %s, now(), %s, %s)"
+                cursor.execute(sql1, (referencia, id_tipo_movimiento,
+                                     id_tienda, id_tienda_origen))
+
+                for d in lista:
+
+                    n = d.get("numero")
+                    cantidad = d.get("cantidad")
+                    id_producto = d.get("id_producto")
+                    costo_unidad = d.get("costo_unidad")
+                    costo_total = d.get("costo_total")
+
+                    sql2 = f"""
+                           insert into movimientos_producto(id_movimiento, numero, cantidad, id_producto, costo_unidad, costo_total)
+                           select mi.id_movimiento id_movimiento, %s numero, %s cantidad, %s id_producto, %s costo_unidad, %s costo_total
+                           from movimientos_inventario mi where mi.referencia = %s;
+                            """
+                    cursor.execute(sql2, (n, cantidad, id_producto,
+                                         costo_unidad, costo_total, referencia))
+
+                    if id_tipo_movimiento in salidas:
+                        cantidad = -cantidad
+                        log.info(f"->> cantidad {cantidad}")
+
+                    sql3 = f"""
+                            insert into inventarios values(null, %s, %s, %s)
+                             ON DUPLICATE KEY UPDATE stock = stock + coalesce(VALUES(stock), 0);
+                            """
+                    cursor.execute(sql3, (id_tienda, id_producto, cantidad))
+
                 log.info("Registro exitoso")
                 conn.commit()
+
             return cursor.rowcount
         except Exception as e:
             raise e
         finally:
             conn.close()
+
+    def get_movimientos(self, referencia:str):
+        log.info(f"Recibiendo referencia: {referencia}...")
+        params = []
+        try:
+            conn = get_connection()
+            with conn.cursor() as cursor:
+                sql = f"""
+                select mi.id_movimiento, referencia, fecha_movimiento, tm.descripcion_movimiento movimiento,
+                       t.descripcion_tienda tienda, t_origen.descripcion_tienda tienda_origen,
+                       JSON_ARRAYAGG(
+           JSON_OBJECT(
+           'numero', mp.numero,
+           'id_produco', mp.id_producto,
+           'clave_prod', p.clave, 
+           'descripcion', p.descripcion,
+           'cantidad', mp.cantidad,
+           'costo_unidad', mp.costo_unidad,
+           'costo_total', mp.costo_total 
+           )) as lista
+                        from  movimientos_inventario mi inner join tipo_movimiento tm
+                        on mi.id_tipo_movimiento = tm.id_tipo_movimiento
+                        inner join movimientos_producto mp on mp.id_movimiento = mi.id_movimiento
+                        inner join productos p on p.id_producto = mp.id_producto 
+                         inner join tiendas t on t.id_tienda = mi.id_tienda 
+                         left join tiendas t_origen on t_origen.id_tienda = mi.id_tienda_origen
+                     """
+                if referencia and referencia is not None:
+                    sql += " where referencia like  %s"
+                    params.append("%" + referencia + "%")
+                sql += " group by mi.id_movimiento;"
+
+                cursor.execute(sql, params)
+                ret = cursor.fetchall()
+
+        except Exception as e:
+            raise e
+        finally:
+            conn.close()
+        return ret
 
 class Politicas:
 
@@ -353,7 +424,7 @@ where id_politica = %s
             conn.close()
 
 class Departamentos:
-    def get_departamentos(self, clave):
+    def get_departamentos(self, clave:str = None):
         log.info(f"Departamento: {clave}")
         params =[]
         try:
@@ -396,14 +467,17 @@ class Departamentos:
             conn.close()
 
 class Lineas:
-    def get_lineas(self, clave):
+    def get_lineas(self, clave:str = None):
         log.info(f"Consultando linea: {clave}")
         params =[]
         try:
             conn = get_connection()
             cursor = conn.cursor()
             sql = f"""
-                    select * from lineas
+                    select l.id_linea, l.clave, l.descripcion_linea, d.descripcion_departamento,
+                           l.id_departamento 
+                     from lineas l, departamentos d 
+                    where l.id_departamento = d.id_departamento; 
                         """
             if clave:
                 sql += f""" where clave like %s"""
@@ -440,7 +514,7 @@ class Lineas:
             conn.close()
 
     def update_linea(self, id_departamento:int, clave:str, descripcion:str, id_linea:int):
-
+        print("*>>>>>>>> update_linea")
         try:
             conn = get_connection()
             with conn.cursor() as cursor:
