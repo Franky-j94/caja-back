@@ -358,18 +358,21 @@ def eliminar_tienda(id):
     finally:
         conn.close()
 
-@app.route('/productos/consulta', methods=['POST'])
+@app.route('/productos', methods=['GET'])
 def get_producto():
-    data = request.get_json()
-    id_tienda = data.get('id_tienda')
-    clave = data.get('clave')
-
+    #data = request.get_json()
+    # 1️⃣ Obtener parámetros de la URL (no del body)
+    parm = request.args.get('params')
+    #id_tienda = data.get('id_tienda')
+    #clave = data.get('clave')
+    print("EJEMPLO ::: ", parm)
     try:
         p = Productos()
-        productos = p.get_productos(id_tienda= id_tienda, clave=clave)
+        #productos = p.get_productos(id_tienda= id_tienda, clave=clave)
+        productos = p.get_products([])
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-    return jsonify(productos)
+    return jsonify(productos), 200
 
 @app.route('/productos', methods=['DELETE'])
 def delete_producto():
